@@ -1,104 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import PropTypes from "prop-types";
 import {
-  TextField,
+  FormControl,
+  InputLabel,
+  Select,
   MenuItem,
   InputAdornment,
-  FormControl,
-  FormLabel,
+  OutlinedInput,
+  FormHelperText,
 } from "@mui/material";
 import { AnimatePresence } from "framer-motion";
 import { PresenceAnimation } from "./FadeIn";
 
-/**
- * CustomSelect genérico con soporte para:
- * - options: array de { value, label } para las opciones
- * - icon: icono a la izquierda o derecha
- * - readOnly: deshabilitar selección
- * - manejo de errores vía errors.message
- * - backgroundColor: color de fondo del input
- */
-const CustomSelect = ({
-  innerRef,
-  name,
-  labelText,
-  ariaLabel,
-  options = [],
-  value,
-  onChange,
-  errors,
-  icon,
-  iconPosition = "left",
-  readOnly = false,
-  backgroundColor = "#ffffff",
-  ...props
-}) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const hasError = !!errors?.message;
+const CustomSelect = forwardRef(
+  (
+    {
+      name,
+      labelText,
+      ariaLabel = "",
+      options = [],
+      value,
+      onChange,
+      onBlur,
+      errors,
+      icon,
+      iconPosition = "start",
+      readOnly = false,
+      backgroundColor = "#ffffff",
+      ...props
+    },
+    ref
+  ) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const hasError = !!errors?.message;
+    const mergedOptions = [
+      { value: "", label: "Seleccione tipo de archivo de salida" },
+      ...options,
+    ];
 
-  return (
-    <FormControl fullWidth>
-      {labelText && (
-        <FormLabel
-          htmlFor={name}
-          sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-          className="!text-xl"
-        >
-          {labelText}
-        </FormLabel>
-      )}
-
-      <TextField
-        select
+    return (
+      <FormControl
         fullWidth
-        {...innerRef}
-        name={name}
-        aria-label={ariaLabel}
         variant="outlined"
-        label={labelText}
-        value={value}
-        onChange={onChange}
-        disabled={readOnly}
-        SelectProps={{
-          startAdornment:
-            icon && iconPosition === "left" ? (
-              <InputAdornment
-                position="start"
-                color={hasError ? "error" : "primary"}
-              >
-                {React.cloneElement(icon, {
-                  style: {
-                    color: hasError
-                      ? "#FF6B6B"
-                      : isFocused
-                      ? "#284485"
-                      : "#202124",
-                  },
-                })}
-              </InputAdornment>
-            ) : null,
-          endAdornment:
-            icon && iconPosition === "right" ? (
-              <InputAdornment
-                position="end"
-                color={hasError ? "error" : "primary"}
-              >
-                {React.cloneElement(icon, {
-                  style: {
-                    color: hasError
-                      ? "#FF6B6B"
-                      : isFocused
-                      ? "#284485"
-                      : "#202124",
-                    cursor: "pointer",
-                  },
-                })}
-              </InputAdornment>
-            ) : null,
-        }}
+        error={hasError}
         sx={{
           "& .MuiOutlinedInput-root": {
-             backgroundColor: backgroundColor,
             borderRadius: "0.3rem",
             borderColor: hasError
               ? "#FF6B6B"
@@ -106,38 +52,90 @@ const CustomSelect = ({
               ? "#284485"
               : "#202124",
             boxShadow: hasError
-              ? "5px 5px 0px 0px #FF6B6B"
+              ? "5px 5px 0px #FF6B6B"
               : isFocused
-              ? "6px 6px 0px 0px #284485"
-              : "5px 5px 0px 0px #000",
-            transition: "box-shadow 0.3s ease, border-color 0.3s ease",
-            "&:hover": {
-              borderColor: hasError ? "#FF6B6B" : "#000",
+              ? "6px 6px 0px #284485"
+              : "5px 5px 0px #000",
+            "&:hover fieldset": { borderColor: hasError ? "#FF6B6B" : "#000" },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderRadius: "0.3rem",
+              borderWidth: "2px",
+              borderColor: hasError
+                ? "#FF6B6B !important"
+                : isFocused
+                ? "#284485 !important"
+                : "#202124 !important",
             },
           },
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderRadius: "0.3rem",
-            borderWidth: "2px",
-            borderColor: hasError
-              ? "#FF6B6B !important"
-              : isFocused
-              ? "#284485 !important"
-              : "#202124 !important",
-          },
         }}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        error={hasError}
-        {...props}
       >
-        {options.map(opt => (
-          <MenuItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </MenuItem>
-        ))}
-      </TextField>
-
-      <div aria-live="polite" aria-atomic="true">
+        <InputLabel id={`${name}-label`} className="!text-xl">
+          {labelText || ariaLabel}
+        </InputLabel>
+        <Select
+          labelId={`${name}-label`}
+          id={name}
+          name={name}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          onOpen={() => setIsFocused(true)}
+          onClose={() => setIsFocused(false)}
+          disabled={readOnly}
+          displayEmpty
+          ref={ref}
+          sx={{
+            backgroundColor,
+          }}
+          input={
+            <OutlinedInput
+              label={labelText || ariaLabel}
+              startAdornment={
+                icon && iconPosition === "start" ? (
+                  <InputAdornment position="start">
+                    {React.cloneElement(icon, {
+                      style: {
+                        color: hasError
+                          ? "#FF6B6B"
+                          : isFocused
+                          ? "#284485"
+                          : "#202124",
+                      },
+                    })}
+                  </InputAdornment>
+                ) : null
+              }
+              endAdornment={
+                icon && iconPosition === "end" ? (
+                  <InputAdornment position="end">
+                    {React.cloneElement(icon, {
+                      style: {
+                        color: hasError
+                          ? "#FF6B6B"
+                          : isFocused
+                          ? "#284485"
+                          : "#202124",
+                        cursor: "pointer",
+                      },
+                    })}
+                  </InputAdornment>
+                ) : null
+              }
+              {...props}
+            />
+          }
+          renderValue={(val) =>
+            val !== ""
+              ? mergedOptions.find((o) => o.value === val)?.label
+              : mergedOptions[0].label
+          }
+        >
+          {mergedOptions.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
         <AnimatePresence>
           {errors?.message && (
             <PresenceAnimation
@@ -150,16 +148,12 @@ const CustomSelect = ({
             </PresenceAnimation>
           )}
         </AnimatePresence>
-      </div>
-    </FormControl>
-  );
-};
+      </FormControl>
+    );
+  }
+);
 
 CustomSelect.propTypes = {
-  innerRef: PropTypes.oneOfType([
-    PropTypes.func,
-    PropTypes.shape({ current: PropTypes.instanceOf(Element) }),
-  ]),
   name: PropTypes.string.isRequired,
   labelText: PropTypes.string,
   ariaLabel: PropTypes.string,
@@ -168,9 +162,10 @@ CustomSelect.propTypes = {
   ),
   value: PropTypes.any,
   onChange: PropTypes.func,
+  onBlur: PropTypes.func,
   errors: PropTypes.shape({ message: PropTypes.string }),
   icon: PropTypes.element,
-  iconPosition: PropTypes.oneOf(["left", "right"]),
+  iconPosition: PropTypes.oneOf(["start", "end"]),
   readOnly: PropTypes.bool,
   backgroundColor: PropTypes.string,
 };

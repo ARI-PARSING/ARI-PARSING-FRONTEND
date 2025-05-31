@@ -4,10 +4,23 @@ import { Link } from "react-router-dom";
 import CustomInput from "../components/generic/CustomInput";
 import CustomSelect from "../components/generic/CustomSelect";
 import CustomButton from "../components/generic/CustomButton";
+import { Controller, useForm } from "react-hook-form";
+import { fileSchema } from "../validations/FileSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const Home = () => {
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(fileSchema),
+  });
+
   // Tipo de archivo
-  const [selected, setSelected] = useState(false);
+  const [selected, setSelected] = useState("");
 
   // Subir archivo:
   const fileInputRef = useRef(null);
@@ -28,6 +41,7 @@ const Home = () => {
 
     const name = file.name;
     setSourcePath(name);
+    setValue("sourcePath", name, { shouldValidate: true });
 
     // Detectar extensión
     const ext = name.split(".").pop().toLowerCase();
@@ -56,7 +70,13 @@ const Home = () => {
     if (files.length) {
       const root = files[0].webkitRelativePath.split("/")[0];
       setDestPath(root);
+      setValue("destPath", root, { shouldValidate: true });
     }
+  };
+
+  // Enviar datossss
+  const onSubmit = (data) => {
+    console.log("Datos validados:", data);
   };
 
   return (
@@ -85,121 +105,129 @@ const Home = () => {
           />
         </div>
 
-        <Grid
-          container
-          spacing={3}
-          sx={{
-            mb: 10,
-            width: "100%",
-          }}
-        >
-          {/* FILE */}
-          <Grid item size={4}>
-            <FormLabel
-              htmlFor={name}
-              sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-              className="!text-xl"
-            >
-              Selecciona un archivo
-            </FormLabel>
-          </Grid>
-          <Grid item size={2}>
-            <CustomButton action={openFileDialog} className="!p-2" as="button">
-              {/* <FileOpenIcon className="mr-2" /> */}
-              Buscar
-            </CustomButton>
-          </Grid>
-          <Grid item size={6}>
-            <p>{sourcePath}</p>
-          </Grid>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid
+            container
+            spacing={3}
+            
+          >
+            {/* FILE */}
+            <Grid item size={4}>
+              <FormLabel
+                htmlFor={name}
+                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                className="!text-xl"
+              >
+                Selecciona un archivo
+              </FormLabel>
+            </Grid>
+            <Grid item size={2}>
+              <CustomButton
+                action={openFileDialog}
+                className="!p-2"
+                as="button"
+              >
+                {/* <FileOpenIcon className="mr-2" /> */}
+                Buscar
+              </CustomButton>
+            </Grid>
+            <Grid item size={6}>
+              <p>{sourcePath}</p>
+            </Grid>
 
-          {/* FILE */}
-          <Grid item size={4}>
-            <FormLabel
-              htmlFor={name}
-              sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-              className="!text-xl"
-            >
-              Selecciona carpeta de destino
-            </FormLabel>
-          </Grid>
-          <Grid item size={2}>
-            <CustomButton
-              action={openFolderDialog}
-              className="!p-2"
-              as="button"
-            >
-              Buscar
-            </CustomButton>
-          </Grid>
-          <Grid item size={6}>
-            <p>{destPath}</p>
-          </Grid>
+            {/* FILE */}
+            <Grid item size={4}>
+              <FormLabel
+                htmlFor={name}
+                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                className="!text-xl"
+              >
+                Selecciona carpeta de destino
+              </FormLabel>
+            </Grid>
+            <Grid item size={2}>
+              <CustomButton
+                action={openFolderDialog}
+                className="!p-2"
+                as="button"
+              >
+                Buscar
+              </CustomButton>
+            </Grid>
+            <Grid item size={6}>
+              <p>{destPath}</p>
+            </Grid>
 
-          {/* OUTPUT TYPE */}
-          <Grid item size={4}>
-            <FormLabel
-              htmlFor={name}
-              sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-              className="!text-xl"
-            >
-              Tipo de archivo de salida:
-            </FormLabel>
-          </Grid>
-          <Grid item size={8}>
-            <CustomSelect
-              name=""
-              labelText=""
-              ariaLabel="Selecciona una categoría"
-              options={[
-                { value: "tech", label: "Tecnología" },
-                { value: "design", label: "Diseño" },
-                { value: "marketing", label: "Marketing" },
-              ]}
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              readOnly={false}
-            />
-          </Grid>
+            {/* OUTPUT TYPE */}
+            <Grid item size={4}>
+              <FormLabel
+                htmlFor={name}
+                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                className="!text-xl"
+              >
+                Tipo de archivo de salida:
+              </FormLabel>
+            </Grid>
+            <Grid item size={8}>
+              <div>
+                <Controller
+                  name="outputFormat"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <CustomSelect
+                      {...field}
+                      options={[
+                        { value: "csv", label: ".csv" },
+                        { value: "txt", label: ".txt" },
+                        { value: "xml", label: ".xml" },
+                        { value: "json", label: ".json" },
+                      ]}
+                      errors={errors.outputFormat}
+                    />
+                  )}
+                />
+              </div>
+            </Grid>
 
-          {/* DELIMITADOR */}
-          <Grid item size={4}>
-            <FormLabel
-              htmlFor={name}
-              sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-              className="!text-xl"
-            >
-              Delimitador
-            </FormLabel>
-          </Grid>
-          <Grid item size={8}>
-            <CustomInput
-              name="delimiter"
-              labelText=""
-              placeholder="aaa"
-              errors={false}
-            />
-          </Grid>
+            {/* DELIMITADOR */}
+            <Grid item size={4}>
+              <FormLabel
+                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                className="!text-xl"
+              >
+                Delimitador
+              </FormLabel>
+            </Grid>
+            <Grid item size={8}>
+              <CustomInput
+                innerRef={register("delimiter")}
+                placeholder="Ingresa el delimitador del archivo"
+                name="delimiter"
+                errors={errors.delimiter}
+              />
+            </Grid>
 
-          {/* KEY */}
-          <Grid item size={4}>
-            <FormLabel
-              htmlFor={name}
-              sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
-              className="!text-xl"
-            >
-              Llave para "cifrar/descifrar":
-            </FormLabel>
+            {/* KEY */}
+            <Grid item size={4}>
+              <FormLabel
+                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                className="!text-xl"
+              >
+                Llave para "cifrar/descifrar":
+              </FormLabel>
+            </Grid>
+            <Grid item size={8}>
+              <CustomInput
+                innerRef={register("key")}
+                placeholder="Ingresa el delimitador del archivo"
+                name="key"
+                errors={errors.key}
+              />
+            </Grid>
           </Grid>
-          <Grid item size={8}>
-            <CustomInput
-              name="key"
-              labelText=""
-              placeholder="aaa"
-              errors={false}
-            />
-          </Grid>
-        </Grid>
+          <CustomButton type="submit" className="my-10 max-w-[35rem] mx-auto !rounded-full">Procesar</CustomButton>
+        </form>
 
         {/* VISUALIZADORES */}
         <Grid container spacing={3}>
