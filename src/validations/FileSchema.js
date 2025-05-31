@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export  const fileSchema = z.object({
   sourcePath: z.string().nonempty("Debes seleccionar un archivo"),
-  destPath: z.string().nonempty("Debes seleccionar una carpeta de destino"),
+  // destPath: z.string().nonempty("Debes seleccionar una carpeta de destino"),
   outputFormat: z.enum(["csv", "txt", "xml", "json"], {
     errorMap: () => ({ message: "Debes seleccionar un formato de salida" }),
   }),

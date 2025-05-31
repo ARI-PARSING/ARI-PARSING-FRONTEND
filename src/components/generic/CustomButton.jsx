@@ -9,11 +9,14 @@ const CustomButton = ({
   to = "",
   className = "",
   children,
+  type = "button",
   loading = false,
-  props,
+  ...props
 }) => {
   const CustomButtonProps =
-    Component === "button" ? { onClick: action, disabled: loading } : { to };
+    Component === "button"
+      ? { onClick: action, disabled: loading, type: type }
+      : { to };
 
   return (
     <Component
@@ -30,7 +33,11 @@ const CustomButton = ({
     >
       {loading ? (
         <>
-          <CircularProgress size={24} className="text-white mr-2" color="#fff" />
+          <CircularProgress
+            size={24}
+            className="text-white mr-2"
+            color="#fff"
+          />
           Cargando
         </>
       ) : (
@@ -47,7 +54,6 @@ CustomButton.propTypes = {
   className: PropTypes.string,
   children: PropTypes.node.isRequired,
   loading: PropTypes.bool,
-  props: PropTypes.object,
 };
 
 export default CustomButton;

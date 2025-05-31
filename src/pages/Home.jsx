@@ -7,6 +7,7 @@ import CustomButton from "../components/generic/CustomButton";
 import { Controller, useForm } from "react-hook-form";
 import { fileSchema } from "../validations/FileSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
 
 const Home = () => {
   const {
@@ -19,9 +20,6 @@ const Home = () => {
     resolver: zodResolver(fileSchema),
   });
 
-  // Tipo de archivo
-  const [selected, setSelected] = useState("");
-
   // Subir archivo:
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -30,6 +28,9 @@ const Home = () => {
   const [destPath, setDestPath] = useState("");
   const [fileType, setFileType] = useState("");
   const [previewContent, setPreviewContent] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const isEncrypted = fileType === "txt" || fileType === "csv";
 
   const openFileDialog = () => fileInputRef.current.click();
   const openFolderDialog = () => folderInputRef.current.click();
@@ -38,6 +39,8 @@ const Home = () => {
   const onFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    setSelectedFile(file);
 
     const name = file.name;
     setSourcePath(name);
@@ -75,8 +78,50 @@ const Home = () => {
   };
 
   // Enviar datossss
-  const onSubmit = (data) => {
-    console.log("Datos validados:", data);
+  const onSubmit = async (data) => {
+    try {
+      if (!selectedFile) {
+        alert("Debe seleccionar un archivo antes de procesar.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("key", data.key);
+      formData.append("delimiter", data.delimiter);
+      formData.append("documentType", data.outputFormat);
+      // formData.append("pathFile", data.destPath);
+      formData.append("pathFile", "nombre.ext");
+
+      const response = await axios.post(
+        "http://localhost:5000/upload/send",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      console.log("Respuesta del servidor:", response.data);
+      alert(
+        "Archivo subido correctamente.\nRuta en servidor: " + response.data.path
+      );
+    } catch (error) {
+      console.error("Error al subir el archivo:", error);
+      if (error.response) {
+        alert(
+          `Error del servidor (status ${error.response.status}): ${
+            error.response.data.message || JSON.stringify(error.response.data)
+          }`
+        );
+      } else {
+        // red, Axios, Cors, etc.
+        alert(
+          "Error inesperado al subir el archivo. Revise la consola para más detalles."
+        );
+      }
+    }
   };
 
   return (
@@ -106,11 +151,7 @@ const Home = () => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid
-            container
-            spacing={3}
-            
-          >
+          <Grid container spacing={3}>
             {/* FILE */}
             <Grid item size={4}>
               <FormLabel
@@ -126,6 +167,7 @@ const Home = () => {
                 action={openFileDialog}
                 className="!p-2"
                 as="button"
+                type="button"
               >
                 {/* <FileOpenIcon className="mr-2" /> */}
                 Buscar
@@ -133,6 +175,11 @@ const Home = () => {
             </Grid>
             <Grid item size={6}>
               <p>{sourcePath}</p>
+              {errors.sourcePath && (
+                <p style={{ color: "red", marginTop: "4px" }}>
+                  {errors.sourcePath.message}
+                </p>
+              )}
             </Grid>
 
             {/* FILE */}
@@ -150,12 +197,18 @@ const Home = () => {
                 action={openFolderDialog}
                 className="!p-2"
                 as="button"
+                type="button"
               >
                 Buscar
               </CustomButton>
             </Grid>
             <Grid item size={6}>
               <p>{destPath}</p>
+              {errors.destPath && (
+                <p style={{ color: "red", marginTop: "4px" }}>
+                  {errors.destPath.message}
+                </p>
+              )}
             </Grid>
 
             {/* OUTPUT TYPE */}
@@ -196,7 +249,9 @@ const Home = () => {
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
                 className="!text-xl"
               >
-                Delimitador
+                {isEncrypted
+                  ? "Delimitador del archivo de entrada:"
+                  : "Delimitador del archivo de salida:"}
               </FormLabel>
             </Grid>
             <Grid item size={8}>
@@ -214,7 +269,7 @@ const Home = () => {
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
                 className="!text-xl"
               >
-                Llave para "cifrar/descifrar":
+                {isEncrypted ? "Llave para cifrar:" : "Llave para descifrar:"}
               </FormLabel>
             </Grid>
             <Grid item size={8}>
@@ -226,7 +281,12 @@ const Home = () => {
               />
             </Grid>
           </Grid>
-          <CustomButton type="submit" className="my-10 max-w-[35rem] mx-auto !rounded-full">Procesar</CustomButton>
+          <CustomButton
+            type="submit"
+            className="my-10 max-w-[35rem] mx-auto !rounded-full"
+          >
+            Procesar
+          </CustomButton>
         </form>
 
         {/* VISUALIZADORES */}
