@@ -124,6 +124,29 @@ const Home = () => {
     }
   };
 
+
+   const [folderName, setFolderName] = useState(null);
+  const [items, setItems] = useState([]);
+
+  const handleSelectFolder = async () => {
+    try {
+      // Lanza el selector de carpetas
+      const dirHandle = await window.showDirectoryPicker();
+      setFolderName(dirHandle.name);
+
+      const entries = [];
+      for await (const entry of dirHandle.values()) {
+        entries.push({ name: entry.name, type: entry.kind }); // "file" o "directory"
+      }
+      setItems(entries);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Error al seleccionar la carpeta:", err);
+      }
+    }
+  };
+
+
   return (
     <div className="bg-secondary_color_variant flex min-h-screen flex-1 items-center flex-col py-12 sm:px-6 lg:px-8">
       <div className="max-w-[1100px] w-full mx-auto p-8 rounded-lg">
@@ -131,6 +154,30 @@ const Home = () => {
           Clima
           <span className="text-6xl text-accent_color font-bold ">Cock</span>
         </h2>
+
+         <button onClick={handleSelectFolder} style={{ padding: "0.5rem 1rem" }}>
+        Seleccionar Carpeta
+      </button>
+
+        {/* <input directory="" webkitdirectory="" type="folder" /> */}
+
+
+        {/* aaaaaaaaaaaaa
+         <input
+      type="file"
+      webkitdirectory="true"
+      directory=""
+      multiple
+      onChange={(e) => {
+        const files = Array.from(e.target.files);
+        // onFilesSelected(files);
+      }}
+    />
+    aaaaaaaaaaaa */}
+
+
+
+
 
         <div>
           {/* Hidden inputs */}
