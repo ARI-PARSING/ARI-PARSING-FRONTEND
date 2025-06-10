@@ -1,17 +1,23 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Home from "./pages/Home";
+import theme from "./theme";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { Toaster } from "sonner";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
-        <h1 class="text-4xl font-bold underline text-accent_color ">
-    Hello world!
-  </h1>
-    </>
-  )
-}
+      <BrowserRouter>
+        <ThemeProvider theme={theme}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+          </Routes>
 
-export default App
+          <Toaster position="top-right" />
+          <CssBaseline />
+        </ThemeProvider>
+      </BrowserRouter>
+    </>
+  );
+}
+export default App;
