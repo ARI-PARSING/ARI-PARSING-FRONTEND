@@ -38,9 +38,9 @@ const Home = () => {
 
   // Funciones para abrir los diálogos de selección
   const openFileDialog = () => fileInputRef.current.click();
-  
+
   const openFolderDialog = async () => {
-    if ('showDirectoryPicker' in window) {
+    if ("showDirectoryPicker" in window) {
       try {
         const handle = await window.showDirectoryPicker();
         setDirectoryHandle(handle);
@@ -54,7 +54,9 @@ const Home = () => {
     } else {
       // Navegador no compatible, usar método tradicional
       folderInputRef.current.click();
-      alert("Tu navegador no soporta selección directa de carpeta. Selecciona cualquier archivo dentro de la carpeta destino.");
+      alert(
+        "Tu navegador no soporta selección directa de carpeta. Selecciona cualquier archivo dentro de la carpeta destino."
+      );
     }
   };
 
@@ -100,27 +102,37 @@ const Home = () => {
     }
   };
 
-  // Función para guardar el archivo resultante
-  const saveResultFile = async (content, fileName) => {
+  const saveResultFile = async (base64Content, fileName) => {
     try {
+      // Convertir base64 a blob
+      const byteCharacters = atob(base64Content);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "text/plain" });
+
       if (directoryHandle) {
-        // Usar File System Access API si está disponible
-        const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+        // Usar File System Access API
+        const fileHandle = await directoryHandle.getFileHandle(fileName, {
+          create: true,
+        });
         const writable = await fileHandle.createWritable();
-        await writable.write(content);
+        await writable.write(blob);
         await writable.close();
         return true;
       } else if (destPath) {
         // Método tradicional (descarga)
-        const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
         return true;
       }
+
       return false;
     } catch (error) {
       console.error("Error al guardar archivo:", error);
@@ -128,8 +140,14 @@ const Home = () => {
     }
   };
 
+  const onError = (formErrors) => {
+    alert("Hay errores en el formulario. Revisa los campos.");
+  };
+
   // Envío del formulario
   const onSubmit = async (data) => {
+    console.log("COOOOL");
+
     try {
       setIsProcessing(true);
       setResultContent(""); // Limpiar resultado anterior
@@ -145,6 +163,8 @@ const Home = () => {
       formData.append("delimiter", data.delimiter);
       formData.append("documentType", data.outputFormat);
 
+      formData.append("pathFile", destPath);
+
       const response = await axios.post(
         "http://localhost:5000/upload/send",
         formData,
@@ -155,33 +175,37 @@ const Home = () => {
         }
       );
 
-      // Mostrar el resultado en el área de preview
-      setResultContent(response.data.content || "Procesamiento completado");
-
       // Generar nombre del archivo de salida
       const outputFileName = selectedFile.name.replace(
-        /\.[^/.]+$/, 
-        `_converted.${data.outputFormat || 'txt'}`
+        /\.[^/.]+$/,
+        `_converted.${data.outputFormat || "txt"}`
       );
 
       // Guardar/descargar el archivo resultante
-      const saveSuccess = await saveResultFile(response.data.content, outputFileName);
+      const saveSuccess = await saveResultFile(
+        response.data.data,
+        outputFileName
+      );
 
       if (saveSuccess) {
         alert("Archivo procesado y guardado correctamente");
+        const decodedText = atob(response.data.data); // decodifica base64 a string plano
+        setResultContent(decodedText);
       } else {
-        alert("Archivo procesado pero no se pudo guardar en la ubicación seleccionada");
+        alert(
+          "Archivo procesado pero no se pudo guardar en la ubicación seleccionada"
+        );
       }
 
       console.log("Respuesta del servidor:", response.data);
     } catch (error) {
       console.error("Error al subir el archivo:", error);
       if (error.response) {
-        alert(
-          `Error del servidor (status ${error.response.status}): ${
-            error.response.data.message || JSON.stringify(error.response.data)
-          }`
-        );
+        const { status, data } = error.response;
+        const message = data.message || "Error en la respuesta del servidor.";
+        const errors = Array.isArray(data.errors) ? data.errors.join("\n") : "";
+
+        alert(`Error del servidor (status ${status}): ${message}\n${errors}`);
       } else {
         alert("Error inesperado al procesar el archivo.");
       }
@@ -217,7 +241,7 @@ const Home = () => {
           />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit, onError)}>
           <Grid container spacing={3}>
             {/* Selección de archivo */}
             <Grid item size={4}>
@@ -349,12 +373,12 @@ const Home = () => {
               />
             </Grid>
           </Grid>
-          
+
           {/* Botón de procesar */}
           <CustomButton
             type="submit"
             className="my-10 max-w-[35rem] mx-auto !rounded-full"
-            disabled={isProcessing || !selectedFile}
+            disabled={isProcessing}
           >
             {isProcessing ? "Procesando..." : "Procesar"}
           </CustomButton>
