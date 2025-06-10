@@ -20,22 +20,45 @@ const Home = () => {
     resolver: zodResolver(fileSchema),
   });
 
-  // Subir archivo:
+  // Refs para los inputs ocultos
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
+  // Estados del componente
   const [sourcePath, setSourcePath] = useState("");
   const [destPath, setDestPath] = useState("");
   const [fileType, setFileType] = useState("");
   const [previewContent, setPreviewContent] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [directoryHandle, setDirectoryHandle] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [resultContent, setResultContent] = useState("");
 
   const isEncrypted = fileType === "txt" || fileType === "csv";
 
+  // Funciones para abrir los diálogos de selección
   const openFileDialog = () => fileInputRef.current.click();
-  const openFolderDialog = () => folderInputRef.current.click();
+  
+  const openFolderDialog = async () => {
+    if ('showDirectoryPicker' in window) {
+      try {
+        const handle = await window.showDirectoryPicker();
+        setDirectoryHandle(handle);
+        setDestPath(handle.name);
+        setValue("destPath", handle.name, { shouldValidate: true });
+      } catch (err) {
+        console.error("Error al seleccionar directorio:", err);
+        // Fallback al método tradicional
+        folderInputRef.current.click();
+      }
+    } else {
+      // Navegador no compatible, usar método tradicional
+      folderInputRef.current.click();
+      alert("Tu navegador no soporta selección directa de carpeta. Selecciona cualquier archivo dentro de la carpeta destino.");
+    }
+  };
 
-  // al seleccionar archivo
+  // Manejo de selección de archivo
   const onFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -59,7 +82,7 @@ const Home = () => {
           const obj = JSON.parse(text);
           text = JSON.stringify(obj, null, 2);
         } catch {
-          // ..
+          // Manejar error de parseo JSON si es necesario
         }
       }
       setPreviewContent(text);
@@ -67,7 +90,7 @@ const Home = () => {
     reader.readAsText(file);
   };
 
-  // al seleccionar carpeta
+  // Manejo de selección de carpeta (método tradicional)
   const onFolderChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length) {
@@ -77,9 +100,40 @@ const Home = () => {
     }
   };
 
-  // Enviar datossss
+  // Función para guardar el archivo resultante
+  const saveResultFile = async (content, fileName) => {
+    try {
+      if (directoryHandle) {
+        // Usar File System Access API si está disponible
+        const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        return true;
+      } else if (destPath) {
+        // Método tradicional (descarga)
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error al guardar archivo:", error);
+      return false;
+    }
+  };
+
+  // Envío del formulario
   const onSubmit = async (data) => {
     try {
+      setIsProcessing(true);
+      setResultContent(""); // Limpiar resultado anterior
+
       if (!selectedFile) {
         alert("Debe seleccionar un archivo antes de procesar.");
         return;
@@ -90,8 +144,6 @@ const Home = () => {
       formData.append("key", data.key);
       formData.append("delimiter", data.delimiter);
       formData.append("documentType", data.outputFormat);
-      // formData.append("pathFile", data.destPath);
-      formData.append("pathFile", "nombre.ext");
 
       const response = await axios.post(
         "http://localhost:5000/upload/send",
@@ -103,10 +155,25 @@ const Home = () => {
         }
       );
 
-      console.log("Respuesta del servidor:", response.data);
-      alert(
-        "Archivo subido correctamente.\nRuta en servidor: " + response.data.path
+      // Mostrar el resultado en el área de preview
+      setResultContent(response.data.content || "Procesamiento completado");
+
+      // Generar nombre del archivo de salida
+      const outputFileName = selectedFile.name.replace(
+        /\.[^/.]+$/, 
+        `_converted.${data.outputFormat || 'txt'}`
       );
+
+      // Guardar/descargar el archivo resultante
+      const saveSuccess = await saveResultFile(response.data.content, outputFileName);
+
+      if (saveSuccess) {
+        alert("Archivo procesado y guardado correctamente");
+      } else {
+        alert("Archivo procesado pero no se pudo guardar en la ubicación seleccionada");
+      }
+
+      console.log("Respuesta del servidor:", response.data);
     } catch (error) {
       console.error("Error al subir el archivo:", error);
       if (error.response) {
@@ -116,11 +183,10 @@ const Home = () => {
           }`
         );
       } else {
-        // red, Axios, Cors, etc.
-        alert(
-          "Error inesperado al subir el archivo. Revise la consola para más detalles."
-        );
+        alert("Error inesperado al procesar el archivo.");
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -133,12 +199,13 @@ const Home = () => {
         </h2>
 
         <div>
-          {/* Hidden inputs */}
+          {/* Inputs ocultos para archivo y carpeta */}
           <input
             type="file"
             ref={fileInputRef}
             style={{ display: "none" }}
             onChange={onFileChange}
+            accept=".txt,.csv,.json,.xml"
           />
           <input
             type="file"
@@ -152,10 +219,9 @@ const Home = () => {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={3}>
-            {/* FILE */}
+            {/* Selección de archivo */}
             <Grid item size={4}>
               <FormLabel
-                htmlFor={name}
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
                 className="!text-xl"
               >
@@ -168,8 +234,8 @@ const Home = () => {
                 className="!p-2"
                 as="button"
                 type="button"
+                disabled={isProcessing}
               >
-                {/* <FileOpenIcon className="mr-2" /> */}
                 Buscar
               </CustomButton>
             </Grid>
@@ -182,10 +248,9 @@ const Home = () => {
               )}
             </Grid>
 
-            {/* FILE */}
+            {/* Selección de carpeta destino */}
             <Grid item size={4}>
               <FormLabel
-                htmlFor={name}
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
                 className="!text-xl"
               >
@@ -198,6 +263,7 @@ const Home = () => {
                 className="!p-2"
                 as="button"
                 type="button"
+                disabled={isProcessing}
               >
                 Buscar
               </CustomButton>
@@ -211,10 +277,9 @@ const Home = () => {
               )}
             </Grid>
 
-            {/* OUTPUT TYPE */}
+            {/* Tipo de archivo de salida */}
             <Grid item size={4}>
               <FormLabel
-                htmlFor={name}
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
                 className="!text-xl"
               >
@@ -237,13 +302,14 @@ const Home = () => {
                         { value: "json", label: ".json" },
                       ]}
                       errors={errors.outputFormat}
+                      disabled={isProcessing}
                     />
                   )}
                 />
               </div>
             </Grid>
 
-            {/* DELIMITADOR */}
+            {/* Delimitador */}
             <Grid item size={4}>
               <FormLabel
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
@@ -260,10 +326,11 @@ const Home = () => {
                 placeholder="Ingresa el delimitador del archivo"
                 name="delimiter"
                 errors={errors.delimiter}
+                disabled={isProcessing}
               />
             </Grid>
 
-            {/* KEY */}
+            {/* Llave de cifrado/descifrado */}
             <Grid item size={4}>
               <FormLabel
                 sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
@@ -275,21 +342,25 @@ const Home = () => {
             <Grid item size={8}>
               <CustomInput
                 innerRef={register("key")}
-                placeholder="Ingresa el delimitador del archivo"
+                placeholder="Ingresa la llave"
                 name="key"
                 errors={errors.key}
+                disabled={isProcessing}
               />
             </Grid>
           </Grid>
+          
+          {/* Botón de procesar */}
           <CustomButton
             type="submit"
             className="my-10 max-w-[35rem] mx-auto !rounded-full"
+            disabled={isProcessing || !selectedFile}
           >
-            Procesar
+            {isProcessing ? "Procesando..." : "Procesar"}
           </CustomButton>
         </form>
 
-        {/* VISUALIZADORES */}
+        {/* Áreas de visualización */}
         <Grid container spacing={3}>
           <Grid item size={6}>
             <CustomInput
@@ -298,7 +369,7 @@ const Home = () => {
               multiline
               rows={20}
               readOnly={true}
-              placeholder=""
+              placeholder="Contenido original aparecerá aquí"
               errors={false}
               value={previewContent}
             />
@@ -306,12 +377,13 @@ const Home = () => {
           <Grid item size={6}>
             <CustomInput
               name="Result"
-              labelText="Result"
+              labelText="Resultado"
               multiline
               rows={20}
               readOnly={true}
-              placeholder=""
+              placeholder="Resultado de la conversión aparecerá aquí"
               errors={false}
+              value={resultContent}
             />
           </Grid>
         </Grid>
@@ -319,4 +391,5 @@ const Home = () => {
     </div>
   );
 };
+
 export default Home;
