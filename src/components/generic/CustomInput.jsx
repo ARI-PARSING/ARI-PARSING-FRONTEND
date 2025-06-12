@@ -37,7 +37,7 @@ const CustomInput = ({
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const hasError = !!errors?.message;
+  const hasError = !!errors?.message ;
 
   return (
     <FormControl fullWidth>

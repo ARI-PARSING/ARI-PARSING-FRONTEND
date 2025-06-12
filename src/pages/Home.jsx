@@ -1,5 +1,5 @@
 import { Button, FormLabel, Grid } from "@mui/material";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import CustomInput from "../components/generic/CustomInput";
 import CustomSelect from "../components/generic/CustomSelect";
@@ -16,6 +16,8 @@ const Home = () => {
     handleSubmit,
     setValue,
     watch,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(fileSchema),
@@ -142,13 +144,38 @@ const Home = () => {
   };
 
   const onError = (formErrors) => {
+    validateDelimiter();
+
     alert("Hay errores en el formulario. Revisa los campos.");
   };
 
+  const validateDelimiter = () => {
+    const source = watch("sourcePath") || "";
+    const format = watch("outputFormat") || "";
+    const delimiter = watch("delimiter") || "";
+
+    const isSourceJsonOrXml =
+      source.endsWith(".json") || source.endsWith(".xml");
+    const isOutputJsonOrXml = format === "json" || format === "xml";
+    const isJsonToJsonOrXml = isSourceJsonOrXml && isOutputJsonOrXml;
+
+    const shouldRequireDelimiter = !isJsonToJsonOrXml || !source || !format;
+
+    if (shouldRequireDelimiter && delimiter.trim() === "") {
+      console.log("SETTING elimiter value")
+
+      setError("delimiter", {
+        type: "manual",
+        message: "El delimitador no puede estar vacío",
+      });
+    } else {
+      console.log("No delimiter value")
+      clearErrors("delimiter");
+    }
+  }
+
   // Envío del formulario
   const onSubmit = async (data) => {
-    console.log("COOOOL");
-
     try {
       setIsProcessing(true);
       setResultContent(""); // Limpiar resultado anterior
@@ -367,6 +394,9 @@ const Home = () => {
               />
             </Grid>
 
+            <p>{isDelimiterDisabled.toString()}</p>
+            {/* <p>a{watch("delimiter") && "El delimitador no puede estar vacío"}a</p> */}
+
             {/* Llave de cifrado/descifrado */}
             <Grid item size={4}>
               <FormLabel
@@ -392,6 +422,7 @@ const Home = () => {
             type="submit"
             className="my-10 max-w-[35rem] mx-auto !rounded-full"
             disabled={isProcessing}
+            action={() => {validateDelimiter()}}
           >
             {isProcessing ? "Procesando..." : "Procesar"}
           </CustomButton>
