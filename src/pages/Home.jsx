@@ -166,7 +166,7 @@ const Home = () => {
       formData.append("pathFile", destPath);
 
       const response = await axios.post(
-        "http://localhost:5000/upload/send",
+        "http://localhost:3000/upload/send",
         formData,
         {
           headers: {
