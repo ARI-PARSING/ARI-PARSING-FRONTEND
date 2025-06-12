@@ -15,6 +15,7 @@ const Home = () => {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(fileSchema),
@@ -160,13 +161,17 @@ const Home = () => {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("key", data.key);
-      formData.append("delimiter", data.delimiter);
       formData.append("documentType", data.outputFormat);
+      // formData.append("delimiter", data.delimiter);
 
       formData.append("pathFile", destPath);
 
+      if (!isDelimiterDisabled) {
+        formData.append("delimiter", data.delimiter);
+      }
+
       const response = await axios.post(
-        "http://localhost:5000/upload/send",
+        import.meta.env.VITE_API_URL,
         formData,
         {
           headers: {
@@ -213,6 +218,10 @@ const Home = () => {
       setIsProcessing(false);
     }
   };
+
+  const isDelimiterDisabled =
+    (fileType === "json" || fileType === "xml") &&
+    (watch("outputFormat") === "json" || watch("outputFormat") === "xml");
 
   return (
     <div className="bg-secondary_color_variant flex min-h-screen flex-1 items-center flex-col py-12 sm:px-6 lg:px-8">
@@ -336,7 +345,11 @@ const Home = () => {
             {/* Delimitador */}
             <Grid item size={4}>
               <FormLabel
-                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                sx={{
+                  color: isDelimiterDisabled ? "#20212470" : "#202124",
+                  fontWeight: 800,
+                  lineHeight: "45px",
+                }}
                 className="!text-xl"
               >
                 {isEncrypted
@@ -350,7 +363,7 @@ const Home = () => {
                 placeholder="Ingresa el delimitador del archivo"
                 name="delimiter"
                 errors={errors.delimiter}
-                disabled={isProcessing}
+                disabled={isProcessing || isDelimiterDisabled}
               />
             </Grid>
 

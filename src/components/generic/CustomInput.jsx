@@ -33,6 +33,7 @@ const CustomInput = ({
   multiline = false,
   rows = 1,
   backgroundColor = "#ffffff",
+  disabled = false,
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -65,6 +66,7 @@ const CustomInput = ({
         variant="outlined"
         multiline={multiline}
         rows={rows}
+        disabled={disabled}
         InputProps={{
           readOnly,
           startAdornment:
@@ -104,6 +106,7 @@ const CustomInput = ({
             ) : null,
         }}
         sx={{
+          opacity: disabled ? 0.3 : 1,
           "& .MuiOutlinedInput-root": {
             backgroundColor: backgroundColor,
             borderRadius: "0.3rem",
