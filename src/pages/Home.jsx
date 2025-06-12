@@ -394,8 +394,6 @@ const Home = () => {
               />
             </Grid>
 
-            <p>{isDelimiterDisabled.toString()}</p>
-            {/* <p>a{watch("delimiter") && "El delimitador no puede estar vacío"}a</p> */}
 
             {/* Llave de cifrado/descifrado */}
             <Grid item size={4}>
