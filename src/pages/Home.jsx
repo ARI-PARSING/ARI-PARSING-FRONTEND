@@ -1,5 +1,5 @@
 import { Button, FormLabel, Grid } from "@mui/material";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import CustomInput from "../components/generic/CustomInput";
 import CustomSelect from "../components/generic/CustomSelect";
@@ -15,6 +15,9 @@ const Home = () => {
     register,
     handleSubmit,
     setValue,
+    watch,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(fileSchema),
@@ -141,13 +144,38 @@ const Home = () => {
   };
 
   const onError = (formErrors) => {
+    validateDelimiter();
+
     alert("Hay errores en el formulario. Revisa los campos.");
   };
 
+  const validateDelimiter = () => {
+    const source = watch("sourcePath") || "";
+    const format = watch("outputFormat") || "";
+    const delimiter = watch("delimiter") || "";
+
+    const isSourceJsonOrXml =
+      source.endsWith(".json") || source.endsWith(".xml");
+    const isOutputJsonOrXml = format === "json" || format === "xml";
+    const isJsonToJsonOrXml = isSourceJsonOrXml && isOutputJsonOrXml;
+
+    const shouldRequireDelimiter = !isJsonToJsonOrXml || !source || !format;
+
+    if (shouldRequireDelimiter && delimiter.trim() === "") {
+      console.log("SETTING elimiter value")
+
+      setError("delimiter", {
+        type: "manual",
+        message: "El delimitador no puede estar vacío",
+      });
+    } else {
+      console.log("No delimiter value")
+      clearErrors("delimiter");
+    }
+  }
+
   // Envío del formulario
   const onSubmit = async (data) => {
-    console.log("COOOOL");
-
     try {
       setIsProcessing(true);
       setResultContent(""); // Limpiar resultado anterior
@@ -160,13 +188,17 @@ const Home = () => {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("key", data.key);
-      formData.append("delimiter", data.delimiter);
       formData.append("documentType", data.outputFormat);
+      // formData.append("delimiter", data.delimiter);
 
       formData.append("pathFile", destPath);
 
+      if (!isDelimiterDisabled) {
+        formData.append("delimiter", data.delimiter);
+      }
+
       const response = await axios.post(
-        "http://localhost:3000/upload/send",
+        import.meta.env.VITE_API_URL,
         formData,
         {
           headers: {
@@ -213,6 +245,10 @@ const Home = () => {
       setIsProcessing(false);
     }
   };
+
+  const isDelimiterDisabled =
+    (fileType === "json" || fileType === "xml") &&
+    (watch("outputFormat") === "json" || watch("outputFormat") === "xml");
 
   return (
     <div className="bg-secondary_color_variant flex min-h-screen flex-1 items-center flex-col py-12 sm:px-6 lg:px-8">
@@ -336,7 +372,11 @@ const Home = () => {
             {/* Delimitador */}
             <Grid item size={4}>
               <FormLabel
-                sx={{ color: "#202124", fontWeight: 800, lineHeight: "45px" }}
+                sx={{
+                  color: isDelimiterDisabled ? "#20212470" : "#202124",
+                  fontWeight: 800,
+                  lineHeight: "45px",
+                }}
                 className="!text-xl"
               >
                 {isEncrypted
@@ -350,9 +390,12 @@ const Home = () => {
                 placeholder="Ingresa el delimitador del archivo"
                 name="delimiter"
                 errors={errors.delimiter}
-                disabled={isProcessing}
+                disabled={isProcessing || isDelimiterDisabled}
               />
             </Grid>
+
+            <p>{isDelimiterDisabled.toString()}</p>
+            {/* <p>a{watch("delimiter") && "El delimitador no puede estar vacío"}a</p> */}
 
             {/* Llave de cifrado/descifrado */}
             <Grid item size={4}>
@@ -379,6 +422,7 @@ const Home = () => {
             type="submit"
             className="my-10 max-w-[35rem] mx-auto !rounded-full"
             disabled={isProcessing}
+            action={() => {validateDelimiter()}}
           >
             {isProcessing ? "Procesando..." : "Procesar"}
           </CustomButton>
