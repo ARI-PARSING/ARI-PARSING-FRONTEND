@@ -254,8 +254,8 @@ const Home = () => {
     <div className="bg-secondary_color_variant flex min-h-screen flex-1 items-center flex-col py-12 sm:px-6 lg:px-8">
       <div className="max-w-[1100px] w-full mx-auto p-8 rounded-lg">
         <h2 className="text-5xl mb-20">
-          Clima
-          <span className="text-6xl text-accent_color font-bold ">Cock</span>
+          Ari
+          <span className="text-6xl text-accent_color font-bold ">Parsing</span>
         </h2>
 
         <div>
